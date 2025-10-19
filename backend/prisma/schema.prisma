@@ -1,0 +1,142 @@
+// Define qual banco de dados estamos usando e a URL de conexão
+datasource db {
+  provider = "postgresql" // Indicamos que é PostgreSQL
+  url      = env("DATABASE_URL") // A URL será lida de uma variável de ambiente (arquivo .env)
+}
+
+// Isso diz ao Prisma para gerar um "cliente" JavaScript/TypeScript
+// que podemos usar no nosso código Node.js para interagir com o DB.
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --- Definições de Enums ---
+// Enums são como listas pré-definidas de opções.
+// Imagine que para um "tipo de requisito", você só pode escolher entre "SYS" ou "SWE".
+// Isso evita erros de digitação e garante consistência.
+
+enum RequirementType {
+  SYS // Requisitos do Sistema
+  SWE // Requisitos de Software
+}
+
+enum ProcessStep { // As etapas do V-Model para requisitos
+  SYS_1 // Elicitação de Requisitos
+  SYS_2 // Análise de Requisitos do Sistema
+  SYS_3 // Projeto da Arquitetura do Sistema
+  SYS_4 // Integração do Sistema e Integração Teste
+  SYS_5 // Qualificação do Sistema
+  SWE_1 // Análise de Requisitos de Software
+  SWE_2 // Projeto de Arquitetura de Software
+  SWE_3 // Implementação de Software
+  SWE_4 // Integração de Software
+  SWE_5 // Verificação de Software
+  SWE_6 // Validação de Software
+}
+
+enum RequirementStatus { // O status atual de um requisito
+  DRAFT       // Rascunho
+  APPROVED    // Aprovado
+  IMPLEMENTED // Implementado
+  VERIFIED    // Verificado
+  VALIDATED   // Validado
+}
+
+enum TraceRelation { // O tipo de relação entre requisitos (rastreabilidade)
+  DERIVES   // Deriva de (ex: Req SWE deriva de Req SYS)
+  SATISFIES // Satisfaz (ex: Req SWE satisfaz Req SYS)
+  VERIFIES  // Verifica (ex: Caso de teste verifica Req SWE)
+  VALIDATES // Valida (ex: Teste de aceitação valida Req SYS)
+}
+
+enum EvidenceType { // Tipo de evidência para Verificação/Validação
+  VERIFICATION
+  VALIDATION
+}
+
+enum TestResult { // Resultado de um teste ou evidência
+  PASS   // Passou
+  FAIL   // Falhou
+  BLOCKED // Bloqueado
+  NA     // Não aplicável
+}
+
+// --- Definição dos Modelos (Tabelas) ---
+// Cada 'model' abaixo se tornará uma tabela no seu banco de dados PostgreSQL.
+
+model User { // Tabela de Usuários
+  id           Int       @id @default(autoincrement()) // ID único, gerado automaticamente
+  name         String    // Nome do usuário
+  email        String    @unique // E-mail, deve ser único para cada usuário
+  passwordHash String    // Senha (armazenada de forma segura com hash)
+  createdAt    DateTime  @default(now()) // Data de criação (automático)
+  projects     Project[] @relation("UserProjects") // Lista de projetos que o usuário é dono (relação com Project)
+  requirements Requirement[] @relation("UserRequirements") // Lista de requisitos criados pelo usuário
+  attachments  Attachment[]  @relation("UserAttachments") // Lista de anexos enviados pelo usuário
+}
+
+model Project { // Tabela de Projetos
+  id          Int           @id @default(autoincrement())
+  name        String        // Nome do projeto
+  description String?       // Descrição (opcional, por isso o ?)
+  createdAt   DateTime      @default(now())
+  owner       User          @relation("UserProjects", fields: [ownerId], references: [id]) // Projeto pertence a um usuário
+  ownerId     Int           // ID do usuário dono
+  requirements Requirement[] // Requisitos associados a este projeto
+}
+
+model Requirement { // Tabela de Requisitos (o coração do sistema)
+  id           Int             @id @default(autoincrement())
+  project      Project         @relation(fields: [projectId], references: [id]) // Requisito pertence a um projeto
+  projectId    Int
+  code         String          @unique // Código do requisito (ex: SYS-REQ-0001), deve ser único
+  title        String          // Título do requisito
+  description  String          // Descrição detalhada
+  type         RequirementType // Tipo (SYS ou SWE) - usa o Enum RequirementType
+  processStep  ProcessStep     // Etapa do V-Model - usa o Enum ProcessStep
+  status       RequirementStatus @default(DRAFT) // Status atual - usa o Enum RequirementStatus, padrão é DRAFT
+  priority     Int?            // Prioridade (opcional)
+  version      Int             @default(1) // Versão do requisito (padrão 1)
+  createdBy    User            @relation("UserRequirements", fields: [createdById], references: [id]) // Quem criou o requisito
+  createdById  Int
+  updatedAt    DateTime        @updatedAt // Data da última atualização (automático)
+  attachments  Attachment[]    // Anexos associados a este requisito
+  tracesFrom   TraceLink[]     @relation("TracesFrom") // Ligações de rastreabilidade "partindo" deste requisito
+  tracesTo     TraceLink[]     @relation("TracesTo")   // Ligações de rastreabilidade "chegando" a este requisito
+  evidences    Evidence[]      // Evidências de verificação/validação para este requisito
+}
+
+model TraceLink { // Tabela de Ligações de Rastreabilidade
+  id                Int           @id @default(autoincrement())
+  fromRequirement   Requirement   @relation("TracesFrom", fields: [fromRequirementId], references: [id])
+  fromRequirementId Int           // Requisito de origem
+  toRequirement     Requirement   @relation("TracesTo", fields: [toRequirementId], references: [id])
+  toRequirementId   Int           // Requisito de destino
+  relation          TraceRelation // Tipo de relação - usa o Enum TraceRelation
+  createdAt         DateTime      @default(now())
+}
+
+model Attachment { // Tabela de Anexos (arquivos, imagens, PDFs)
+  id             Int       @id @default(autoincrement())
+  requirement    Requirement @relation(fields: [requirementId], references: [id]) // Anexo pertence a um requisito
+  requirementId  Int
+  fileName       String    // Nome original do arquivo
+  fileType       String    // Tipo MIME do arquivo (ex: application/pdf)
+  fileSize       Int       // Tamanho do arquivo em bytes
+  storagePath    String    // Caminho onde o arquivo está salvo no servidor
+  uploadedBy     User      @relation("UserAttachments", fields: [uploadedById], references: [id]) // Quem fez o upload
+  uploadedById   Int
+  createdAt      DateTime  @default(now())
+}
+
+model Evidence { // Tabela de Evidências (para Verificação/Validação)
+  id             Int           @id @default(autoincrement())
+  requirement    Requirement   @relation(fields: [requirementId], references: [id]) // Evidência para qual requisito
+  requirementId  Int
+  type           EvidenceType  // Tipo de evidência (Verificação ou Validação)
+  method         String?       // Método usado (ex: "Análise", "Teste")
+  result         TestResult?   // Resultado (PASS/FAIL/BLOCKED/NA)
+  notes          String?       // Notas adicionais
+  attachmentId   Int?          // Opcional: ID de um anexo que serve como evidência (ex: relatório de teste em PDF)
+  createdAt      DateTime      @default(now())
+}
