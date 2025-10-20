@@ -1,37 +1,34 @@
-// AspireVmodel2/backend/src/server.js
-require('dotenv').config();
+// D:\AspireVmodel2\backend\src\server.js
 const express = require('express');
-const cors = require('cors');
-const authRoutes = require('./routes/authRoutes');
-const requirementRoutes = require('./routes/requirementRoutes');
-const authMiddleware = require('./middleware/authMiddleware'); // <--- CORREÇÃO: Importa a função diretamente
-const pool = require('./config/db'); // <--- Mantenha a importação do pool para a conexão
+const dotenv = require('dotenv');
 
+// É CRÍTICO que dotenv.config() seja chamado O MAIS CEDO POSSÍVEL
+// para garantir que process.env esteja populado antes de outros módulos que dependem dele.
+dotenv.config(); // <--- AGORA ESTÁ NO TOPO!
+
+const cors = require('cors'); // Para permitir requisições do frontend
+const db = require('./config/db'); // Importa o pool de conexão do banco de dados
+
+// Importar arquivos de rota
+const userRoutes = require('./routes/userRoutes');
+const requirementRoutes = require('./routes/requirementRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+// Middlewares
+app.use(cors()); // Habilita CORS para todas as origens
+app.use(express.json()); // Permite que o servidor entenda JSON
 
-// Rotas de Autenticação
-app.use('/api/auth', authRoutes);
-app.use('/api', requirementRoutes);
+// Rotas da API
+app.use('/api/users', userRoutes);
+app.use('/api/requirements', requirementRoutes);
 
-// Exemplo de rota protegida
-app.get('/api/protected', authMiddleware, (req, res) => { // <--- CORREÇÃO: Usa 'authMiddleware' diretamente
-    res.json({ message: `Bem-vindo, usuário ${req.userId}! Esta é uma rota protegida.` });
-});
-
+// Rota principal (opcional, apenas para testar se o servidor está online)
 app.get('/', (req, res) => {
-    res.send('Servidor AspireVmodel2 rodando! 🚀');
+    res.send('API está funcionando!');
 });
 
-// Adicionando um console.log para testar a conexão com o banco de dados
-pool.query('SELECT NOW()')
-    .then(() => console.log('Conectado ao PostgreSQL!'))
-    .catch(err => console.error('Erro ao conectar ao PostgreSQL:', err));
-
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);

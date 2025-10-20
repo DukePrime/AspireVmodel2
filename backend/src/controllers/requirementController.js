@@ -1,6 +1,22 @@
 // D:\AspireVmodel2\backend\src\controllers\requirementController.js
 const Requirement = require('../models/requirementModel');
 
+// Mapeamento de status para garantir compatibilidade com o banco de dados
+// As chaves são o que seu frontend pode enviar (ou o que você pode querer padronizar),
+// e os valores são o que o seu banco de dados espera, em maiúsculas.
+const statusMap = {
+    'PENDENTE': 'PENDING',
+    'EM_PROGRESSO': 'IN_PROGRESS',
+    'CONCLUIDO': 'COMPLETED',
+    'BLOQUEADO': 'BLOCKED',
+    'CANCELADO': 'CANCELLED',
+    // Adicione outros mapeamentos se houver variação na entrada do frontend
+    // ou se o frontend enviar termos em inglês mas com capitalização diferente (ex: 'in_progress')
+};
+
+// Array de status válidos que o banco de dados aceita
+const validDbStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED', 'CANCELLED'];
+
 // Handler para criar um novo requisito
 exports.createRequirement = async (req, res) => {
     // req.userId é esperado do middleware de autenticação (JWT)
@@ -14,15 +30,30 @@ exports.createRequirement = async (req, res) => {
         return res.status(400).json({ message: 'Título, tipo e status são obrigatórios.' });
     }
 
+    // Processamento do status:
+    // 1. Converte para maiúsculas para uniformidade.
+    // 2. Tenta encontrar um mapeamento no statusMap.
+    // 3. Se não encontrar, assume que o status já pode ser um dos valores válidos do DB.
+    let processedStatus = status.toUpperCase(); // Converte para maiúsculas primeiro
+
+    if (statusMap[processedStatus]) { // Verifica se existe um mapeamento exato
+        processedStatus = statusMap[processedStatus];
+    } else if (!validDbStatuses.includes(processedStatus)) { // Se não mapeou e não é um status válido do DB
+        // Aqui, o status recebido é inválido. Pode-se retornar um erro ou definir um padrão.
+        console.warn(`Status '${status}' recebido é inválido. Usando 'PENDING' como padrão.`);
+        // return res.status(400).json({ message: `Status inválido '${status}'. Valores permitidos: ${validDbStatuses.join(', ')}.` });
+        processedStatus = 'PENDING'; // Define um status padrão seguro
+    }
+
     try {
         const newRequirement = await Requirement.create(
             title,
             description,
             type,
-            status,
-            priority, // Novo campo
-            createdByUserId, // ID do usuário que criou
-            assignedToUserId // Novo campo
+            processedStatus, // Usamos o status processado/validado
+            priority,
+            createdByUserId,
+            assignedToUserId
         );
         res.status(201).json(newRequirement);
     } catch (error) {
@@ -64,12 +95,21 @@ exports.updateRequirement = async (req, res) => {
     // O createdByUserId não é atualizado, apenas no create.
     // Você pode adicionar lógica de verificação se o usuário logado tem permissão para atualizar este requisito.
 
+    // Processamento do status para update também, se necessário
+    let processedStatus = status ? status.toUpperCase() : undefined;
+    if (processedStatus && statusMap[processedStatus]) {
+        processedStatus = statusMap[processedStatus];
+    } else if (processedStatus && !validDbStatuses.includes(processedStatus)) {
+        console.warn(`Status '${status}' recebido para atualização é inválido. Não será atualizado.`);
+        processedStatus = undefined; // Não atualiza o status se for inválido
+    }
+
     try {
         const updatedRequirement = await Requirement.update(id, {
             title,
             description,
             type,
-            status,
+            status: processedStatus, // Usa o status processado para o update
             priority,
             assignedToUserId
         });

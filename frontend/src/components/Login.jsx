@@ -1,26 +1,29 @@
 // D:\AspireVmodel2\frontend\src\components\Login.jsx
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api'; // Certifique-se que o caminho para 'api' está correto!
-import { AuthContext } from '../context/AuthContext'; // Se estiver usando AuthContext
+// Não precisamos mais importar 'api' diretamente aqui, pois o AuthContext já o utiliza.
+import { AuthContext } from '../context/AuthContext'; // Importa AuthContext
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(''); // Usado para mensagens de erro/sucesso
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext); // Se estiver usando AuthContext
+  const { login } = useContext(AuthContext); // Pega a função de login do contexto
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setMessage(''); // Limpa mensagens anteriores
     try {
-      const response = await api.post('/api/auth/login', { email, password });
-      setMessage(response.data.message);
-      login(response.data.token, response.data.user); // Se estiver usando AuthContext
-      navigate('/'); // Redireciona para a home após o login
+      // **CHAMADA CORRETA:** Usa a função 'login' do AuthContext
+      // Esta função já faz a chamada à API para '/api/users/login' e lida com o estado.
+      await login(email, password);
+      setMessage('Login bem-sucedido! Redirecionando...');
+      navigate('/dashboard'); // Redireciona para o dashboard após login bem-sucedido
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Erro no login.');
-      console.error('Erro no login:', error);
+      // O erro já é formatado pelo AuthContext para ser mais amigável
+      setMessage(error.message || 'Erro inesperado ao fazer login.');
+      console.error('Erro no login do componente Login:', error);
     }
   };
 
@@ -36,7 +39,7 @@ function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoComplete="email" // Adicionado para atender sugestão do Chrome
+            autoComplete="email"
           />
         </div>
         <div>
@@ -47,12 +50,12 @@ function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            autoComplete="current-password" // Adicionado para atender sugestão do Chrome
+            autoComplete="current-password"
           />
         </div>
         <button type="submit">Login</button>
       </form>
-      {message && <p>{message}</p>}
+      {message && <p>{message}</p>} {/* Exibe a mensagem de erro/sucesso */}
     </div>
   );
 }

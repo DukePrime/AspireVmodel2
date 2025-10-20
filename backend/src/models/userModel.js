@@ -1,4 +1,4 @@
-// AspireVmodel2/backend/src/models/userModel.js
+// D:\AspireVmodel2\backend\src\models\userModel.js
 const pool = require('../config/db');
 
 class User {
@@ -18,6 +18,13 @@ class User {
     static async findById(id) {
         const result = await pool.query('SELECT id, username, email FROM users WHERE id = $1', [id]);
         return result.rows[0];
+    }
+
+    // NOVO MÉTODO: Buscar informações públicas de todos os usuários
+    // Retorna apenas id, username e email, que são informações seguras para o frontend
+    static async findAllPublicInfo() {
+        const result = await pool.query('SELECT id, username, email FROM users ORDER BY username ASC');
+        return result.rows;
     }
 }
 

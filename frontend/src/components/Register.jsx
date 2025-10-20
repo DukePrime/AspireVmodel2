@@ -1,67 +1,88 @@
-// D:\AspireVmodel2\frontend\src\components\Register.jsx
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../services/api'; // Certifique-se que o caminho para 'api' está correto!
+// D:\AspireVmodel2\frontend\src\context\AuthContext.jsx
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import api from '../services/api';
 
-function Register() {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const navigate = useNavigate();
+export const AuthContext = createContext(null);
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
+export function AuthProvider({ children }) {
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+  const [isAuthenticated, setIsAuthenticated] = useState(!!token);
+
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('token', token);
+      setIsAuthenticated(true);
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setIsAuthenticated(false);
+    }
+  }, [token]);
+
+  const login = async (email, password) => {
     try {
-      const response = await api.post('/api/auth/register', { username, email, password });
-      setMessage(response.data.message);
-      // Redirecionar para a página de login após o registro bem-sucedido
-      navigate('/login');
+      const url = '/api/users/login';
+      console.log('Tentando login para URL:', api.defaults.baseURL + url);
+      const response = await api.post(url, { email, password });
+      const { token: receivedToken, user: receivedUser } = response.data;
+
+      setToken(receivedToken);
+      setUser(receivedUser);
+      localStorage.setItem('token', receivedToken);
+      localStorage.setItem('user', JSON.stringify(receivedUser));
+      setIsAuthenticated(true);
+      return response.data;
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Erro no registro.');
-      console.error('Erro no registro:', error);
+      console.error('Erro na função login do AuthContext:', error);
+      throw new Error(error.response?.data?.message || 'Falha na autenticação. Verifique suas credenciais.');
     }
   };
 
+  // --- NOVA FUNÇÃO DE REGISTRO ---
+  const register = async (name, email, password) => {
+    try {
+      const url = '/api/users/register'; // <--- URL CORRETA PARA O BACKEND
+      console.log('Tentando registro para URL:', api.defaults.baseURL + url);
+      const response = await api.post(url, { name, email, password }); // Envia name, email, password
+      const { token: receivedToken, user: receivedUser } = response.data;
+
+      // Após o registro, já logamos o usuário
+      setToken(receivedToken);
+      setUser(receivedUser);
+      localStorage.setItem('token', receivedToken);
+      localStorage.setItem('user', JSON.stringify(receivedUser));
+      setIsAuthenticated(true);
+      return response.data;
+    } catch (error) {
+      console.error('Erro na função register do AuthContext:', error);
+      throw new Error(error.response?.data?.message || 'Falha no registro.');
+    }
+  };
+  // --- FIM DA NOVA FUNÇÃO DE REGISTRO ---
+
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+  };
+
+  const value = {
+    token,
+    user,
+    isAuthenticated,
+    login,
+    register, // <--- EXPORTE A NOVA FUNÇÃO AQUI!
+    logout
+  };
+
   return (
-    <div className="register-container">
-      <h2>Registrar</h2>
-      <form onSubmit={handleRegister}>
-        <div>
-          <label htmlFor="username">Usuário:</label>
-          <input
-            type="text"
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="email">Email:</label>
-          <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="password">Senha:</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit">Registrar</button>
-      </form>
-      {message && <p>{message}</p>}
-    </div>
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 
-export default Register;
+export const useAuth = () => useContext(AuthContext);

@@ -1,14 +1,14 @@
 // D:\AspireVmodel2\frontend\src\App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Home from './components/Home'; 
-import Register from './components/Register';
-import Login from './components/Login';
-import RequirementList from './components/RequirementList'; 
-import RequirementForm from './components/RequirementForm'; 
-import ProtectedRoute from './components/ProtectedRoute'; 
-import { AuthProvider } from './context/AuthContext'; 
-import './App.css'; 
+import Home from './components/Home';
+import RegisterPage from './pages/RegisterPage'; // <-- CORREÇÃO AQUI! O CAMINHO E O NOME!
+import Login from './components/Login'; // Mantém o nome Login, pois o arquivo é Login.jsx
+import RequirementList from './components/RequirementList';
+import RequirementForm from './components/RequirementForm';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
+import './App.css';
 
 function App() {
   return (
@@ -25,7 +25,7 @@ function App() {
 
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/register" element={<RegisterPage />} /> {/* <-- USANDO O NOME CORRETO AQUI! */}
           <Route path="/login" element={<Login />} />
 
           {/* Rota para exibir a lista de requisitos */}

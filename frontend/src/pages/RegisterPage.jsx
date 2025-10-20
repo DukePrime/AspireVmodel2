@@ -18,8 +18,8 @@ function RegisterPage() {
     setSuccess('');
     try {
       await register(username, email, password);
-      setSuccess('Registro bem-sucedido! Redirecionando para o dashboard...');
-      navigate('/dashboard'); // Redireciona para o dashboard após registro
+      setSuccess('Registro bem-sucedido! Redirecionando para a Home...');
+      navigate('/'); // <--- ALTERADO AQUI: Redireciona para a rota raiz
     } catch (err) {
       setError(err.message || 'Erro ao registrar.');
     }

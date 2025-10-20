@@ -1,11 +1,9 @@
 // D:\AspireVmodel2\frontend\src\context\AuthContext.jsx
-import React, { createContext, useState, useEffect } from 'react';
-import api from '../services/api'; // Garanta que o caminho para 'api' está correto!
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import api from '../services/api';
 
-// 1. Cria o contexto. É importante que ele seja um named export!
 export const AuthContext = createContext(null);
 
-// 2. Cria o componente Provedor de Autenticação
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
@@ -15,7 +13,6 @@ export function AuthProvider({ children }) {
     if (token) {
       localStorage.setItem('token', token);
       setIsAuthenticated(true);
-      // Opcional: Validar token com o backend ou buscar dados do usuário
     } else {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -23,16 +20,44 @@ export function AuthProvider({ children }) {
     }
   }, [token]);
 
-  // Função de login
-  const login = (newToken, userData) => {
-    setToken(newToken);
-    setUser(userData);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setIsAuthenticated(true);
+  const login = async (email, password) => {
+    try {
+      const url = '/api/users/login';
+      console.log('Tentando login para URL:', api.defaults.baseURL + url);
+      const response = await api.post(url, { email, password });
+      const { token: receivedToken, user: receivedUser } = response.data;
+
+      setToken(receivedToken);
+      setUser(receivedUser);
+      localStorage.setItem('token', receivedToken);
+      localStorage.setItem('user', JSON.stringify(receivedUser));
+      setIsAuthenticated(true);
+      return response.data;
+    } catch (error) {
+      console.error('Erro na função login do AuthContext:', error);
+      throw new Error(error.response?.data?.message || 'Falha na autenticação. Verifique suas credenciais.');
+    }
   };
 
-  // Função de logout
+  const register = async (name, email, password) => { // <--- ESTA FUNÇÃO AQUI!
+    try {
+      const url = '/api/users/register'; // <--- URL CORRETA PARA O BACKEND
+      console.log('Tentando registro para URL:', api.defaults.baseURL + url);
+      const response = await api.post(url, { name, email, password });
+      const { token: receivedToken, user: receivedUser } = response.data;
+
+      setToken(receivedToken);
+      setUser(receivedUser);
+      localStorage.setItem('token', receivedToken);
+      localStorage.setItem('user', JSON.stringify(receivedUser));
+      setIsAuthenticated(true);
+      return response.data;
+    } catch (error) {
+      console.error('Erro na função register do AuthContext:', error);
+      throw new Error(error.response?.data?.message || 'Falha no registro.');
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -46,6 +71,7 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated,
     login,
+    register, // <--- EXPORTE A FUNÇÃO 'register' AQUI!
     logout
   };
 
@@ -55,3 +81,5 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
+export const useAuth = () => useContext(AuthContext);

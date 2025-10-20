@@ -1,5 +1,8 @@
-// AspireVmodel2/backend/src/config/db.js
+// D:\AspireVmodel2\backend\src\config\db.js
 const { Pool } = require('pg');
+
+// Adicione este console.log aqui para depuração
+
 
 const pool = new Pool({
     user: process.env.DB_USER,
