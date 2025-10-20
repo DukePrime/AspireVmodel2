@@ -2,9 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const upload = require('../config/multerConfig');
-const { protect } = require('../middleware/authMiddleware'); // Para proteger as rotas de upload
+const { protect } = require('../../middleware/authMiddleware'); // Para proteger as rotas de upload
 const path = require('path');
-const pool = require('../config/db'); // Para salvar metadados no DB
+const pool = require('../../config/db'); // Para salvar metadados no DB
 
 // Rota para upload de um único arquivo
 router.post('/upload', protect, upload.single('file'), async (req, res) => {
