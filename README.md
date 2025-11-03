@@ -1,5 +1,8 @@
 # AspireVmodel2
 
+<div>
+ <img align="right" alt="Rafa-pic" height="150" style="border-radius:50px;" src="https://c.tenor.com/TWwip6b2x0kAAAAM/robot-wave-waving.gif">
+ </div>
 
 
 🚀 Sistema de Gestão de Requisitos de Software
