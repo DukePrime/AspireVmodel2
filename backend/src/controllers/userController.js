@@ -1,4 +1,4 @@
-// D:\AspireVmodel2\backend\src\controllers\authController.js
+// D:\AspireVmodel2\backend\src\controllers\userController.js
 const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -12,8 +12,7 @@ exports.registerUser = async (req, res) => {
         const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.status(201).json({ message: 'Usuário registrado com sucesso', user: newUser, token });
     } catch (error) {
-        console.error(error);
-        // Check for duplicate email error from PostgreSQL (code 23505 for unique violation)
+        console.error("Erro ao registrar usuário:", error);
         if (error.code === '23505' && error.constraint === 'users_email_key') {
             return res.status(400).json({ message: 'Este e-mail já está em uso.' });
         }
@@ -38,31 +37,29 @@ exports.loginUser = async (req, res) => {
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.json({ message: 'Login bem-sucedido', user: { id: user.id, username: user.username, email: user.email }, token });
     } catch (error) {
-        console.error(error);
+        console.error("Erro ao fazer login:", error);
         res.status(500).json({ message: 'Erro ao fazer login', error: error.message });
     }
 };
 
-// Get User Profile (ou a sua função 'getMe')
-exports.getMe = async (req, res) => { // Use 'getMe' se este é o nome da sua função
+// Get User Profile
+exports.getUserProfile = async (req, res) => {
     try {
-        // req.userId é definido pelo middleware de autenticação
         const user = await User.findById(req.userId);
         if (!user) {
             return res.status(404).json({ message: 'Usuário não encontrado' });
         }
         res.json({ id: user.id, username: user.username, email: user.email });
     } catch (error) {
-        console.error(error);
+        console.error("Erro ao buscar perfil do usuário:", error);
         res.status(500).json({ message: 'Erro ao buscar perfil do usuário', error: error.message });
     }
 };
 
-// --- NOVO: Listar todos os usuários (para atribuição de requisitos) ---
+// Listar todos os usuários (para atribuição de requisitos)
 exports.getAllUsers = async (req, res) => {
     try {
         const users = await User.findAll();
-        // Retorna apenas informações públicas como id e username
         res.json(users.map(user => ({ id: user.id, username: user.username })));
     } catch (error) {
         console.error('Erro ao listar usuários:', error);

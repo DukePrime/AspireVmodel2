@@ -4,7 +4,7 @@ const pool = require('../config/db');
 class User {
     static async create(username, email, password) {
         const result = await pool.query(
-            'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email, created_at',
+            'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
             [username, email, password]
         );
         return result.rows[0];
@@ -20,9 +20,8 @@ class User {
         return result.rows[0];
     }
 
-    // NOVO MÉTODO: Buscar informações públicas de todos os usuários
-    // Retorna apenas id, username e email, que são informações seguras para o frontend
-    static async findAllPublicInfo() {
+    // --- NOVO: Método para buscar todos os usuários ---
+    static async findAll() {
         const result = await pool.query('SELECT id, username, email FROM users ORDER BY username ASC');
         return result.rows;
     }

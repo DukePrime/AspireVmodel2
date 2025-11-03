@@ -1,17 +1,14 @@
 // D:\AspireVmodel2\backend\src\controllers\requirementController.js
 const Requirement = require('../models/requirementModel');
+const pool = require('../config/db');
 
 // Mapeamento de status para garantir compatibilidade com o banco de dados
-// As chaves são o que seu frontend pode enviar (ou o que você pode querer padronizar),
-// e os valores são o que o seu banco de dados espera, em maiúsculas.
 const statusMap = {
     'PENDENTE': 'PENDING',
     'EM_PROGRESSO': 'IN_PROGRESS',
     'CONCLUIDO': 'COMPLETED',
     'BLOQUEADO': 'BLOCKED',
     'CANCELADO': 'CANCELLED',
-    // Adicione outros mapeamentos se houver variação na entrada do frontend
-    // ou se o frontend enviar termos em inglês mas com capitalização diferente (ex: 'in_progress')
 };
 
 // Array de status válidos que o banco de dados aceita
@@ -19,53 +16,81 @@ const validDbStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'BLOCKED', 'CANC
 
 // Handler para criar um novo requisito
 exports.createRequirement = async (req, res) => {
-    // req.userId é esperado do middleware de autenticação (JWT)
-    const createdByUserId = req.userId; // ID do usuário logado que está criando o requisito
+    const createdByUserId = req.userId; // ID do usuário logado
+    let { title, description, type, status, priority, assignedToUserId, projectName } = req.body;
 
-    // Extrair os dados do corpo da requisição
-    const { title, description, type, status, priority, assignedToUserId } = req.body;
 
-    // Validação básica (opcional, mas recomendado)
+    console.log('--- createRequirement: Dados recebidos ---');
+    console.log('req.body:', { title, description, type, status, priority, assignedToUserId, projectName });
+    console.log('createdByUserId (do token):', createdByUserId);
+
     if (!title || !type || !status) {
+        console.error('createRequirement: Erro de validação - Título, tipo e status são obrigatórios.');
         return res.status(400).json({ message: 'Título, tipo e status são obrigatórios.' });
     }
 
-    // Processamento do status:
-    // 1. Converte para maiúsculas para uniformidade.
-    // 2. Tenta encontrar um mapeamento no statusMap.
-    // 3. Se não encontrar, assume que o status já pode ser um dos valores válidos do DB.
-    let processedStatus = status.toUpperCase(); // Converte para maiúsculas primeiro
-
-    if (statusMap[processedStatus]) { // Verifica se existe um mapeamento exato
+    let processedStatus = status.toUpperCase();
+    if (statusMap[processedStatus]) {
         processedStatus = statusMap[processedStatus];
-    } else if (!validDbStatuses.includes(processedStatus)) { // Se não mapeou e não é um status válido do DB
-        // Aqui, o status recebido é inválido. Pode-se retornar um erro ou definir um padrão.
-        console.warn(`Status '${status}' recebido é inválido. Usando 'PENDING' como padrão.`);
-        // return res.status(400).json({ message: `Status inválido '${status}'. Valores permitidos: ${validDbStatuses.join(', ')}.` });
-        processedStatus = 'PENDING'; // Define um status padrão seguro
+    } else if (!validDbStatuses.includes(processedStatus)) {
+        console.warn(`createRequirement: Status '${status}' recebido é inválido. Usando 'PENDING' como padrão.`);
+        processedStatus = 'PENDING';
     }
+
+    // --- Tratamento para campos opcionais vazios se tornarem NULL, para DB ---
+    const finalDescription = description === '' || description === undefined ? null : description;
+    const finalPriority = priority === '' || priority === undefined ? null : priority;
+    const finalAssignedToUserId = assignedToUserId === '' || assignedToUserId === undefined ? null : assignedToUserId;
+    const finalProjectName = projectName === '' || projectName === undefined ? null : projectName;
+
+    console.log('createRequirement: Dados processados antes de enviar ao modelo:', {
+        title,
+        description: finalDescription,
+        type,
+        status: processedStatus,
+        priority: finalPriority,
+        createdByUserId,
+        assignedToUserId: finalAssignedToUserId,
+        projectName: finalProjectName
+    });
 
     try {
         const newRequirement = await Requirement.create(
             title,
-            description,
+            finalDescription,
             type,
-            processedStatus, // Usamos o status processado/validado
-            priority,
+            processedStatus,
+            finalPriority,
             createdByUserId,
-            assignedToUserId
+            finalAssignedToUserId,
+            finalProjectName
         );
-        res.status(201).json(newRequirement);
+        
+        if (newRequirement && newRequirement.id) {
+            console.log('createRequirement: Requisito criado com sucesso no banco de dados. ID:', newRequirement.id);
+            res.status(201).json(newRequirement);
+        } else {
+            console.error('createRequirement: Requirement.create não retornou um objeto de requisito válido com ID, apesar de não ter lançado erro.');
+            res.status(500).json({ message: 'Erro interno do servidor: O requisito não foi retornado após a criação no DB.' });
+        }
     } catch (error) {
-        console.error('Erro ao criar requisito:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao criar requisito.' });
+        console.error('createRequirement: Erro CATASTRÓFICO ao criar requisito no controlador:', error);
+        let errorMessage = 'Erro interno do servidor ao criar requisito.';
+        if (error.detail) errorMessage += ` Detalhes: ${error.detail}`;
+        if (error.hint) errorMessage += ` Dica: ${error.hint}`;
+        if (error.code) errorMessage += ` Código do Erro PG: ${error.code}`;
+        res.status(500).json({ message: errorMessage });
     }
 };
 
-// Handler para obter todos os requisitos
+// Handler para obter todos os requisitos do usuário logado
 exports.getRequirements = async (req, res) => {
     try {
-        const requirements = await Requirement.findAll();
+        const userId = req.userId;
+        const { projectName } = req.query; // <--- CORREÇÃO: Extrai o parâmetro projectName da query string
+
+        // Passa o projectName para o método de busca
+        const requirements = await Requirement.findAllByUserId(userId, projectName); // <--- CORREÇÃO: Passa projectName
         res.status(200).json(requirements);
     } catch (error) {
         console.error('Erro ao buscar requisitos:', error);
@@ -73,13 +98,32 @@ exports.getRequirements = async (req, res) => {
     }
 };
 
-// Handler para obter um requisito por ID (se você adicionou o método findById no model)
+// NOVO HANDLER: Para obter TODOS os requisitos (não filtrados por user ID)
+exports.getAllRequirements = async (req, res) => {
+    console.log('--- getAllRequirements: Requisição para todos os requisitos recebida ---');
+    try {
+        const { projectName } = req.query; // <--- CORREÇÃO: Extrai o parâmetro projectName da query string
+
+        // Passa o projectName para o método de busca
+        const requirements = await Requirement.findAll(projectName); // <--- CORREÇÃO: Passa projectName
+        res.status(200).json(requirements);
+    } catch (error) {
+        console.error('getAllRequirements: Erro ao buscar TODOS os requisitos:', error);
+        res.status(500).json({ message: 'Erro interno do servidor ao buscar todos os requisitos.' });
+    }
+};
+
+// Handler para obter um requisito por ID do usuário logado
 exports.getRequirementById = async (req, res) => {
     try {
         const { id } = req.params;
-        const requirement = await Requirement.findById(id);
+        const userId = req.userId;
+        console.log('--- DEBUG getRequirementById ---');
+        console.log('ID do requisito da URL:', id);
+        console.log('ID do usuário do token (req.userId):', userId); 
+        const requirement = await Requirement.findByIdAndUserId(id, userId);
         if (!requirement) {
-            return res.status(404).json({ message: 'Requisito não encontrado.' });
+            return res.status(404).json({ message: 'Requisito não encontrado ou você não tem permissão para vê-lo.' });
         }
         res.status(200).json(requirement);
     } catch (error) {
@@ -88,33 +132,39 @@ exports.getRequirementById = async (req, res) => {
     }
 };
 
-// Handler para atualizar um requisito (se você adicionou o método update no model)
+// Handler para atualizar um requisito do usuário logado
 exports.updateRequirement = async (req, res) => {
     const { id } = req.params;
-    const { title, description, type, status, priority, assignedToUserId } = req.body;
-    // O createdByUserId não é atualizado, apenas no create.
-    // Você pode adicionar lógica de verificação se o usuário logado tem permissão para atualizar este requisito.
+    const userId = req.userId;
+    // <--- CORREÇÃO: Inclui projectName na desestruturação de req.body
+    let { title, description, type, status, priority, assignedToUserId, projectName } = req.body;
 
-    // Processamento do status para update também, se necessário
     let processedStatus = status ? status.toUpperCase() : undefined;
     if (processedStatus && statusMap[processedStatus]) {
         processedStatus = statusMap[processedStatus];
     } else if (processedStatus && !validDbStatuses.includes(processedStatus)) {
         console.warn(`Status '${status}' recebido para atualização é inválido. Não será atualizado.`);
-        processedStatus = undefined; // Não atualiza o status se for inválido
+        processedStatus = undefined;
     }
 
+    const finalAssignedToUserId = assignedToUserId !== undefined ? (assignedToUserId === '' ? null : assignedToUserId) : undefined;
+    const finalDescription = description !== undefined ? (description === '' ? null : description) : undefined;
+    const finalPriority = priority !== undefined ? (priority === '' ? null : priority) : undefined;
+    // <--- CORREÇÃO: Processa projectName para NULL se vazio/undefined
+    const finalProjectName = projectName !== undefined ? (projectName === '' ? null : projectName) : undefined;
+
     try {
-        const updatedRequirement = await Requirement.update(id, {
+        const updatedRequirement = await Requirement.update(id, userId, {
             title,
-            description,
+            description: finalDescription,
             type,
-            status: processedStatus, // Usa o status processado para o update
-            priority,
-            assignedToUserId
+            status: processedStatus,
+            priority: finalPriority,
+            assignedToUserId: finalAssignedToUserId,
+            projectName: finalProjectName // <--- CORREÇÃO: Passa projectName para a função update do modelo
         });
         if (!updatedRequirement) {
-            return res.status(404).json({ message: 'Requisito não encontrado para atualização.' });
+            return res.status(404).json({ message: 'Requisito não encontrado ou você não tem permissão para atualizá-lo.' });
         }
         res.status(200).json(updatedRequirement);
     } catch (error) {
@@ -123,17 +173,89 @@ exports.updateRequirement = async (req, res) => {
     }
 };
 
-// Handler para deletar um requisito (se você adicionou o método delete no model)
+// Handler para deletar um requisito do usuário logado
 exports.deleteRequirement = async (req, res) => {
     try {
         const { id } = req.params;
-        const deletedRequirement = await Requirement.delete(id);
+        const userId = req.userId;
+
+        const deletedRequirement = await Requirement.delete(id, userId);
         if (!deletedRequirement) {
-            return res.status(404).json({ message: 'Requisito não encontrado para exclusão.' });
+            return res.status(404).json({ message: 'Requisito não encontrado ou você não tem permissão para excluí-lo.' });
         }
         res.status(200).json({ message: 'Requisito excluído com sucesso.', deletedRequirement });
     } catch (error) {
         console.error('Erro ao deletar requisito:', error);
         res.status(500).json({ message: 'Erro interno do servidor ao deletar requisito.' });
+    }
+};
+
+// @desc    Obter resumo de dados para o dashboard do usuário logado
+// @route   GET /api/requirements/dashboard-summary
+// @access  Private
+exports.getDashboardSummary = async (req, res) => {
+    const userId = req.userId;
+
+    try {
+        // Total de requisitos para o usuário logado
+        const totalResult = await pool.query('SELECT COUNT(*) FROM requirements WHERE created_by_user_id = $1', [userId]);
+        const totalRequirements = parseInt(totalResult.rows[0].count, 10);
+
+        // Contagem de requisitos por status para o usuário logado
+        const statusCountsResult = await pool.query(
+            'SELECT status, COUNT(*) FROM requirements WHERE created_by_user_id = $1 GROUP BY status',
+            [userId]
+        );
+
+        const statusCounts = {};
+        validDbStatuses.forEach(status => {
+            statusCounts[status] = 0;
+        });
+        
+        statusCountsResult.rows.forEach(row => {
+            statusCounts[row.status] = parseInt(row.count, 10);
+        });
+
+        res.status(200).json({
+            totalRequirements,
+            statusCounts,
+        });
+
+    } catch (error) {
+        console.error('Erro ao obter resumo do dashboard:', error);
+        res.status(500).json({ message: 'Erro interno do servidor ao obter resumo do dashboard.' });
+    }
+};
+
+// NOVO HANDLER: Obter resumo de dados para o dashboard de TODOS os requisitos
+exports.getDashboardSummaryAll = async (req, res) => {
+    console.log('--- getDashboardSummaryAll: Requisição para resumo geral recebida ---');
+    try {
+        // Total de requisitos para TODOS os usuários
+        const totalResult = await pool.query('SELECT COUNT(*) FROM requirements');
+        const totalRequirements = parseInt(totalResult.rows[0].count, 10);
+
+        // Contagem de requisitos por status para TODOS os usuários
+        const statusCountsResult = await pool.query(
+            'SELECT status, COUNT(*) FROM requirements GROUP BY status'
+        );
+
+        const statusCounts = {};
+        validDbStatuses.forEach(status => {
+            statusCounts[status] = 0;
+        });
+        
+        statusCountsResult.rows.forEach(row => {
+            statusCounts[row.status] = parseInt(row.count, 10);
+        });
+
+        res.status(200).json({
+            totalRequirements,
+            statusCounts,
+        });
+
+    } catch (error) {
+        console.error('getDashboardSummaryAll: Erro ao obter resumo do dashboard geral:', error);
+        res.status(500).json({ message: 'Erro interno do servidor ao obter resumo do dashboard geral.' });
     }
 };

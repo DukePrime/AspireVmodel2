@@ -1,3 +1,30 @@
+/* D:\AspireVmodel2\frontend\src\App.css */
+
+/* Definição das variáveis de tema */
+:root {
+  --primary-color: #95130A; /* Vermelho RGB(149, 19, 10) */
+  --primary-color-hover: #b81c12; /* Um tom um pouco mais escuro para o hover do vermelho */
+  --secondary-color: #6c757d; /* Cor secundária (cinza, para elementos neutros) */
+  --background-color: #f0f2f5; /* Cor de fundo geral da aplicação */
+  --text-color: #333; /* Cor padrão para o texto */
+  --light-text-color: #fff; /* Cor para texto em fundos escuros */
+  --border-color: #ced4da; /* Cor padrão para bordas de inputs, etc. */
+}
+
+/* Estilos globais para o corpo da página */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+/* Estilo para o contêiner principal da aplicação (mantido do seu root original) */
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -5,38 +32,56 @@
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Estilos para botões e links que atuam como botões */
+button, .button, a.button {
+  padding: 10px 20px;
+  font-size: 1em;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  background-color: var(--primary-color);
+  color: var(--light-text-color);
+  text-decoration: none; /* Importante para Links */
+  display: inline-block; /* Para que os links se comportem como blocos e aceitem padding/margin */
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+button:hover, .button:hover, a.button:hover {
+  background-color: var(--primary-color-hover);
 }
 
-.card {
-  padding: 2em;
+/* Mensagens de erro e sucesso */
+.error-message {
+  color: #dc3545; /* Vermelho padrão para erros */
+  margin-top: 10px;
+  font-weight: bold;
 }
 
-.read-the-docs {
-  color: #888;
+.success-message {
+  color: #28a745; /* Verde padrão para sucesso */
+  margin-top: 10px;
+  font-weight: bold;
 }
+
+/* Estilos para campos de entrada de texto, email, senha, textarea e select */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  font-size: 1em;
+  margin-bottom: 15px;
+  width: calc(100% - 22px); /* Ajusta a largura para considerar padding e borda */
+  box-sizing: border-box; /* Garante que padding e borda sejam incluídos na largura total */
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary-color); /* Borda com a cor principal no foco */
+  outline: none; /* Remove o ou
