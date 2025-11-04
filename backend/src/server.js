@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const cors = require('cors');
+const cors = require('cors'); 
 const db = require('./config/db');
 
 const userRoutes = require('./routes/userRoutes');
@@ -14,13 +14,12 @@ const app = express();
 
 const frontendUrl = 'https://aspirevmodel2-frontend.onrender.com'; 
 
-app.use(cors({
+app.use(cors({ 
   origin: frontendUrl, 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
   allowedHeaders: ['Content-Type', 'Authorization'], 
   credentials: true
 }));
-
 
 app.use(express.json());
 
