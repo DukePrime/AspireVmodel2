@@ -1,13 +1,13 @@
 // D:\AspireVmodel2\backend\src\controllers\userController.js
 const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); // bcrypt é necessário aqui para o loginUser e pode ser usado para o hash se preferir no controller, mas com a mudança no model, não será mais usado para o registro
+const bcrypt = require('bcryptjs'); // Usando 'bcryptjs' para consistência com o model
 
 // Register User
 exports.registerUser = async (req, res) => {
     const { username, email, password } = req.body;
     try {
-        // O hashing da senha agora é feito DENTRO do User.create (no model).
+        // Agora, o hash da senha é feito DENTRO do User.create (no model).
         // Então, passamos a senha BRUTA para o método create do User.
         const newUser = await User.create(username, email, password); 
         
@@ -32,7 +32,7 @@ exports.loginUser = async (req, res) => {
         }
 
         // CORREÇÃO: Comparar a senha bruta com o user.password_hash (que vem do banco)
-        const isMatch = await bcrypt.compare(password, user.password_hash); // <-- AQUI!
+        const isMatch = await bcrypt.compare(password, user.password_hash);
         if (!isMatch) {
             return res.status(400).json({ message: 'Credenciais inválidas' });
         }
