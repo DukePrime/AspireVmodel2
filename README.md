@@ -1,8 +1,11 @@
 # AspireVmodel2
 
+<div>
+ <img align="right" alt="Rafa-pic" height="150" style="border-radius:50px;" src="https://c.tenor.com/TWwip6b2x0kAAAAM/robot-wave-waving.gif">
+ </div>
 
 
-\# 🚀 Sistema de Gestão de Requisitos de Software
+🚀 Sistema de Gestão de Requisitos de Software
 
 
 
@@ -10,33 +13,33 @@ Bem-vindo ao Sistema de Gestão de Requisitos de Software! Este projeto é uma f
 
 
 
-\## ✨ Funcionalidades
+✨ Funcionalidades
 
 
 
-\*   \*\*Autenticação de Usuário:\*\* Sistema de login e registro seguro com JWT (JSON Web Tokens).
+Autenticação de Usuário:\*\* Sistema de login e registro seguro com JWT (JSON Web Tokens).
 
-\*   \*\*Gestão Completa de Requisitos (CRUD):\*\*
+Gestão Completa de Requisitos (CRUD):\*\*
 
-&nbsp;   \*   \*\*Criar novos requisitos com detalhes como título, descrição, tipo, status, prioridade, projeto e atribuição de usuário.
+Criar novos requisitos com detalhes como título, descrição, tipo, status, prioridade, projeto e atribuição de usuário.
 
-&nbsp;   \*   \*\*Registrar (listar) todos os requisitos criados pelo usuário logado.
+Registrar (listar) todos os requisitos criados pelo usuário logado.
 
-&nbsp;   \*   \*\*Update (editar) requisitos existentes.
+Update (editar) requisitos existentes.
 
-&nbsp;   \*   \*\*Deletar requisitos.
+Deletar requisitos.
 
-\*   \*\*Visualização Detalhada:\*\* Cada requisito possui uma visualização completa de seus atributos.
+Visualização Detalhada:\*\* Cada requisito possui uma visualização completa de seus atributos.
 
-\*   \*\*Painel de Resumo (Dashboard):\*\* Visão geral dos requisitos, incluindo contagens por status e total.
+Painel de Resumo (Dashboard):\*\* Visão geral dos requisitos, incluindo contagens por status e total.
 
-\*   \*\*Interface Intuitiva:\*\* Desenvolvida com React para uma experiência de usuário fluida.
+Interface Intuitiva:\*\* Desenvolvida com React para uma experiência de usuário fluida.
 
-\*   \*\*API RESTful:\*\* Backend robusto para gerenciar as operações de dados.
+API RESTful:\*\* Backend robusto para gerenciar as operações de dados.
 
 
 
-\## 🛠️ Tecnologias Utilizadas
+🛠️ Tecnologias Utilizadas
 
 
 
@@ -44,35 +47,35 @@ Este projeto utiliza uma arquitetura full-stack composta por:
 
 
 
-\### Frontend
+Frontend
 
-\*   \*\*React.js:\*\* Biblioteca JavaScript para construção de interfaces de usuário.
+React.js: Biblioteca JavaScript para construção de interfaces de usuário.
 
-\*   \*\*React Router DOM:\*\* Para gerenciamento de rotas na aplicação.
+React Router DOM:Para gerenciamento de rotas na aplicação.
 
-\*   \*\*Axios:\*\* Cliente HTTP para comunicação com a API.
+Axios:Cliente HTTP para comunicação com a API.
 
-\*   \*\*Context API:\*\* Para gerenciamento de estado global (autenticação).
+Context API:Para gerenciamento de estado global (autenticação).
 
-\*   \*\*Vite:\*\* Ferramenta de build rápida para projetos React (pode ser Create React App ou similar).
+Vite: Ferramenta de build rápida para projetos React (pode ser Create React App ou similar).
 
 
 
-\### Backend
+Backend
 
-\*   \*\*Node.js:\*\* Ambiente de execução JavaScript.
+Node.js:Ambiente de execução JavaScript.
 
-\*   \*\*Express.js:\*\* Framework web para Node.js, construindo a API RESTful.
+Express.js:Framework web para Node.js, construindo a API RESTful.
 
-\*   \*\*PostgreSQL:\*\* Banco de dados relacional.
+PostgreSQL:Banco de dados relacional.
 
-\*   \*\*`pg`:\*\* Cliente PostgreSQL para Node.js.
+`pg`:Cliente PostgreSQL para Node.js.
 
-\*   \*\*JWT (JSON Web Tokens):\*\* Para autenticação e autorização de usuários.
+JWT (JSON Web Tokens):Para autenticação e autorização de usuários.
 
-\*   \*\*Bcrypt:\*\* Para hash de senhas.
+Bcrypt:Para hash de senhas.
 
-\*   \*\*`dotenv`:\*\* Para gerenciamento de variáveis de ambiente.
+dotenv`:Para gerenciamento de variáveis de ambiente.
 
 
 
