@@ -2,28 +2,31 @@
 const express = require('express');
 const dotenv = require('dotenv');
 
-// É CRÍTICO que dotenv.config() seja chamado O MAIS CEDO POSSÍVEL
-// para garantir que process.env esteja populado antes de outros módulos que dependem dele.
-dotenv.config(); // <--- AGORA ESTÁ NO TOPO!
+dotenv.config();
 
-const cors = require('cors'); // Para permitir requisições do frontend
-const db = require('./config/db'); // Importa o pool de conexão do banco de dados
+const cors = require('cors');
+const db = require('./config/db');
 
-// Importar arquivos de rota
 const userRoutes = require('./routes/userRoutes');
 const requirementRoutes = require('./routes/requirementRoutes');
 
 const app = express();
 
-// Middlewares
-app.use(cors()); // Habilita CORS para todas as origens
-app.use(express.json()); // Permite que o servidor entenda JSON
+const frontendUrl = 'https://aspirevmodel2-frontend.onrender.com'; 
 
-// Rotas da API
+app.use(cors({
+  origin: frontendUrl, 
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+  credentials: true
+}));
+
+
+app.use(express.json());
+
 app.use('/api/users', userRoutes);
 app.use('/api/requirements', requirementRoutes);
 
-// Rota principal (opcional, apenas para testar se o servidor está online)
 app.get('/', (req, res) => {
     res.send('API está funcionando!');
 });
