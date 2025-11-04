@@ -1,20 +1,20 @@
 // D:\AspireVmodel2\backend\src\models\userModel.js
 const pool = require('../config/db');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
-const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || '10', 10);
+const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 
 module.exports = {
-  // Cria usuário e retorna somente dados públicos
+  // Cria usuário e retorna apenas dados públicos
   async create({ username, email, password }) {
     if (!username || !email || !password) {
       throw new Error('username, email e password são obrigatórios');
     }
 
-    // Hash da senha antes de salvar
-    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    // Usando bcryptjs (API síncrona para evitar callbacks)
+    const salt = bcrypt.genSaltSync(SALT_ROUNDS);
+    const passwordHash = bcrypt.hashSync(password, salt);
 
-    // Importante: inserir na coluna password_hash (não "password")
     const query = `
       INSERT INTO users (username, email, password_hash)
       VALUES ($1, $2, $3)
@@ -26,7 +26,7 @@ module.exports = {
     return rows[0]; // { id, username, email }
   },
 
-  // Busca por email, retornando também o hash da senha
+  // Busca por email e inclui o hash (com alias "password" p/ compatibilidade)
   async findByEmail(email) {
     const { rows } = await pool.query(
       `
@@ -35,7 +35,7 @@ module.exports = {
         username,
         email,
         password_hash,
-        password_hash AS password -- campo alternativo para compatibilidade com controllers diferentes
+        password_hash AS password
       FROM users
       WHERE email = $1
       LIMIT 1
