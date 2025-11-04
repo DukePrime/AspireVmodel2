@@ -1,71 +1,83 @@
-// D:\AspireVmodel2\backend\src\controllers\userController.js
-const User = require('../models/userModel');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); // Usando 'bcryptjs' para consistência com o model
+// D:\AspireVmodel2\backend\src\models\userModel.js
+const pool = require('../config/db');
+const bcrypt = require('bcryptjs');
 
-// Register User
-exports.registerUser = async (req, res) => {
-    const { username, email, password } = req.body;
-    try {
-        // Agora, o hash da senha é feito DENTRO do User.create (no model).
-        // Então, passamos a senha BRUTA para o método create do User.
-        const newUser = await User.create(username, email, password); 
-        
-        const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.status(201).json({ message: 'Usuário registrado com sucesso', user: newUser, token });
-    } catch (error) {
-        console.error("Erro ao registrar usuário:", error);
-        if (error.code === '23505' && error.constraint === 'users_email_key') {
-            return res.status(400).json({ message: 'Este e-mail já está em uso.' });
-        }
-        res.status(500).json({ message: 'Erro ao registrar usuário', error: error.message });
-    }
-};
+// Você pode ajustar por env se quiser (padrão: 10)
+const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS || 10);
 
-// Login User
-exports.loginUser = async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        const user = await User.findByEmail(email);
-        if (!user) {
-            return res.status(400).json({ message: 'Credenciais inválidas' });
-        }
+// Observação: este model assume que a coluna no banco é "password".
+// Se a sua coluna já for "password_hash", altere nos trechos marcados abaixo.
 
-        // CORREÇÃO: Comparar a senha bruta com o user.password_hash (que vem do banco)
-        const isMatch = await bcrypt.compare(password, user.password_hash);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Credenciais inválidas' });
-        }
+async function create(userOrUsername, emailArg, passwordArg) {
+  // Compatibilidade com duas assinaturas:
+  // - create({ username, email, password })
+  // - create(username, email, password)
+  let data;
+  if (typeof userOrUsername === 'object' && userOrUsername !== null) {
+    const { username, email, password } = userOrUsername;
+    data = { username, email, password };
+  } else {
+    data = { username: userOrUsername, email: emailArg, password: passwordArg };
+  }
 
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ message: 'Login bem-sucedido', user: { id: user.id, username: user.username, email: user.email }, token });
-    } catch (error) {
-        console.error("Erro ao fazer login:", error);
-        res.status(500).json({ message: 'Erro ao fazer login', error: error.message });
-    }
-};
+  // Validações mínimas
+  const missing = ['username', 'email', 'password'].filter((k) => !data?.[k]);
+  if (missing.length) {
+    const err = new Error('Parâmetros obrigatórios ausentes: ' + missing.join(', '));
+    err.status = 400;
+    throw err;
+  }
 
-// Get User Profile
-exports.getUserProfile = async (req, res) => {
-    try {
-        const user = await User.findById(req.userId);
-        if (!user) {
-            return res.status(404).json({ message: 'Usuário não encontrado' });
-        }
-        res.json({ id: user.id, username: user.username, email: user.email });
-    } catch (error) {
-        console.error("Erro ao buscar perfil do usuário:", error);
-        res.status(500).json({ message: 'Erro ao buscar perfil do usuário', error: error.message });
-    }
-};
+  // Hash da senha
+  const passwordHash = await bcrypt.hash(String(data.password), SALT_ROUNDS);
 
-// Listar todos os usuários (para atribuição de requisitos)
-exports.getAllUsers = async (req, res) => {
-    try {
-        const users = await User.findAll();
-        res.json(users.map(user => ({ id: user.id, username: user.username })));
-    } catch (error) {
-        console.error('Erro ao listar usuários:', error);
-        res.status(500).json({ message: 'Erro interno do servidor ao listar usuários.' });
-    }
+  // IMPORTANTE: Se sua tabela tem coluna "password_hash" (recomendado), troque o nome da coluna abaixo.
+  const query = `
+    INSERT INTO users (username, email, password)
+    VALUES ($1, $2, $3)
+    RETURNING id, username, email
+  `;
+  const values = [data.username, data.email, passwordHash];
+
+  try {
+    const { rows } = await pool.query(query, values);
+    return rows[0]; // { id, username, email }
+  } catch (error) {
+    // Deixe o controller lidar com códigos como 23505 (e-mail duplicado)
+    throw error;
+  }
+}
+
+async function findByEmail(email) {
+  // Se sua coluna no banco já é "password_hash", altere "password AS password_hash" para apenas "password_hash".
+  const query = `
+    SELECT id, username, email, password AS password_hash
+    FROM users
+    WHERE email = $1
+    LIMIT 1
+  `;
+  const { rows } = await pool.query(query, [email]);
+  return rows[0] || null;
+}
+
+async function findById(id) {
+  const { rows } = await pool.query(
+    'SELECT id, username, email FROM users WHERE id = $1 LIMIT 1',
+    [id]
+  );
+  return rows[0] || null;
+}
+
+async function findAll() {
+  const { rows } = await pool.query(
+    'SELECT id, username, email FROM users ORDER BY username ASC'
+  );
+  return rows;
+}
+
+module.exports = {
+  create,
+  findByEmail,
+  findById,
+  findAll
 };
