@@ -21,7 +21,7 @@ pool.connect((err, client, done) => {
         console.error('Erro ao conectar ao banco de dados:', err.stack);
     } else {
         console.log('Conectado ao PostgreSQL!');
-        client.release(); 
+        
         done(); 
     }
 });
